@@ -1,10 +1,12 @@
 package com.zeydie.tdlib;
 
+import com.google.common.util.concurrent.AbstractScheduledService;
+import com.google.common.util.concurrent.Service;
+import com.zeydie.api.modules.interfaces.IInitialize;
 import com.zeydie.sgson.SGsonFile;
 import com.zeydie.tdlib.configs.AuthConfig;
 import com.zeydie.tdlib.configs.TDLibConfig;
 import com.zeydie.tdlib.handlers.UpdateAuthorizationStateResultHandler;
-import com.zeydie.api.modules.interfaces.IInitialize;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import org.drinkless.tdlib.Client;
@@ -17,15 +19,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
 @Log4j2
 public final class TDLib implements IInitialize {
     @Getter
     private static @NotNull TDLib instance = new TDLib();
+
+    public static void main(@Nullable final String[] args) {
+        instance.preInit();
+    }
 
     public static Client getClient() {
         return instance.client;
@@ -58,8 +63,14 @@ public final class TDLib implements IInitialize {
     @Getter
     private static @NotNull TDLibConfig tdLibConfig = new SGsonFile(TDLIB.resolve("tdlib.jcfg")).fromJsonToObject(new TDLibConfig());
 
+    private @NotNull Service scheduledService;
+
     @Override
     public void preInit() {
+        log.debug("================PREINIT==================");
+        log.debug("AuthConfig: {}", this.authConfig);
+        log.debug("TdLibConfig: {}", this.tdLibConfig);
+
         @NonNull val os = this.getOs();
         @NonNull val arch = this.getArch();
 
@@ -73,6 +84,8 @@ public final class TDLib implements IInitialize {
                 extractAndLoadDll(WINDOWS_TDJNI);
             } else if (os.toLowerCase(Locale.ROOT).startsWith("linux"))
                 extractAndLoadDll(LINUX_TDJNI);
+
+        this.init();
     }
 
     public @NotNull String getOs() {
@@ -100,7 +113,13 @@ public final class TDLib implements IInitialize {
         if (inputStream != null) {
             path.getParent().toFile().mkdirs();
 
-            Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(
+                    inputStream,
+                    Paths.get(System.getProperties().getProperty("java.home"))
+                            .resolve("bin")
+                            .resolve(path.getFileName()),
+                    StandardCopyOption.REPLACE_EXISTING
+            );
 
             log.debug("Extracted {}", name);
         } else log.warn("Not found {} ({})!", name, inputStream);
@@ -117,17 +136,53 @@ public final class TDLib implements IInitialize {
     @Override
     @SneakyThrows
     public void init() {
+        log.debug("================INIT==================");
+
         Client.setLogMessageHandler(this.verbosityLevelConsole, (verbosityLevel, message) -> log.debug(message));
 
         Client.execute(new TdApi.SetLogVerbosityLevel(this.verbosityLevelFile));
         Client.execute(new TdApi.SetLogStream(new TdApi.LogStreamFile("logs/tdlib.log", Integer.MAX_VALUE, false)));
 
         this.client = Client.create(new UpdateAuthorizationStateResultHandler(), exception -> log.error(exception.getMessage(), exception), exception -> log.error(exception.getMessage(), exception));
+
+        while (!this.isStarted());
     }
 
     @Override
     public void postInit() {
-        this.loadChats();
+        log.debug("================POSTINIT==================");
+
+        this.scheduledService = new AbstractScheduledService() {
+            @Override
+            protected void runOneIteration() {
+                client.send(
+                        new TdApi.LoadChats(
+                                new TdApi.ChatListMain(),
+                                20
+                        ),
+                        log::debug
+                );
+                client.send(
+                        new TdApi.LoadChats(
+                                new TdApi.ChatListArchive(),
+                                20
+                        ),
+                        log::debug
+                );
+                client.send(
+                        new TdApi.LoadChats(
+                                new TdApi.ChatListFolder(),
+                                20
+                        ),
+                        log::debug
+                );
+            }
+
+            @Override
+            protected @NotNull AbstractScheduledService.Scheduler scheduler() {
+                return Scheduler.newFixedRateSchedule(0, 1, TimeUnit.SECONDS);
+            }
+        }.startAsync();
     }
 
     public void stop() {
@@ -138,7 +193,7 @@ public final class TDLib implements IInitialize {
         this.client.send(
                 new TdApi.LoadChats(
                         new TdApi.ChatListMain(),
-                        1000
+                        100
                 ),
                 log::debug
         );

@@ -1,10 +1,7 @@
 package com.zeydie.tdlib.handlers;
 
 import com.zeydie.tdlib.TDLib;
-import com.zeydie.tdlib.handlers.auth.AuthorizationStateWaitCodeResultHandler;
-import com.zeydie.tdlib.handlers.auth.AuthorizationStateWaitPhoneNumberResultHandler;
-import com.zeydie.tdlib.handlers.auth.AuthorizationStateWaitTdlibParametersResultHandler;
-import com.zeydie.tdlib.handlers.auth.IResultHandler;
+import com.zeydie.tdlib.handlers.auth.*;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
@@ -24,7 +21,9 @@ public final class UpdateAuthorizationStateResultHandler implements Client.Resul
                     TDLib.getTdLibConfig().isUseTestServer()
             ),
             new AuthorizationStateWaitPhoneNumberResultHandler(TDLib.getAuthConfig().getPhoneNumber()),
-            new AuthorizationStateWaitCodeResultHandler()
+            new AuthorizationStateWaitCodeResultHandler(),
+            new AuthorizationStateWaitPassword(),
+            new AuthorizationStateReady()
     );
 
     private boolean equals(@NonNull final TdApi.Object object) {
