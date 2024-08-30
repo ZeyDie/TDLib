@@ -1,4 +1,7 @@
 package com.zeydie.tdlib.handlers.basis;
 
-public interface IStateHandler extends IResultHandler {
+import org.drinkless.tdlib.Client;
+
+public interface IStateHandler extends Client.ResultHandler {
+    int getConstructor();
 }

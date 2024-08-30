@@ -2,14 +2,11 @@ package com.zeydie.tdlib.handlers.auth.states;
 
 import com.zeydie.tdlib.TDLib;
 import com.zeydie.tdlib.handlers.basis.IStateHandler;
-import lombok.Cleanup;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.drinkless.tdlib.TdApi;
-
-import java.util.Scanner;
 
 @Log4j2
 public final class AuthorizationStateWaitPassword implements IStateHandler {
@@ -22,11 +19,11 @@ public final class AuthorizationStateWaitPassword implements IStateHandler {
     }
 
     private @NonNull String readPassword() {
-        @Cleanup val scanner = new Scanner(System.in);
-
         log.info("Write password: ");
 
-        return scanner.nextLine();
+        val line = TDLib.readConsole();
+
+        return line == null ? this.readPassword() : line;
     }
 
     private void sendCheckAuthenticationPassword(@NonNull final String password) {

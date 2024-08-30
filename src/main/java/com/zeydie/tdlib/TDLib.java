@@ -5,7 +5,9 @@ import com.zeydie.api.modules.interfaces.IInitialize;
 import com.zeydie.sgson.SGsonFile;
 import com.zeydie.tdlib.configs.AuthConfig;
 import com.zeydie.tdlib.configs.TDLibConfig;
+import com.zeydie.tdlib.handlers.auth.UpdateAuthorizationResultHandler;
 import com.zeydie.tdlib.handlers.basis.UpdateResultHandler;
+import com.zeydie.tdlib.handlers.chat.UpdateChatResultHandler;
 import com.zeydie.tdlib.schedulers.LoadChatsScheduler;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
@@ -19,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
+import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -61,6 +64,11 @@ public final class TDLib implements IInitialize {
     private static @NotNull AuthConfig authConfig = new SGsonFile(TDLIB.resolve("auth.jcfg")).fromJsonToObject(new AuthConfig());
     @Getter
     private static @NotNull TDLibConfig tdLibConfig = new SGsonFile(TDLIB.resolve("tdlib.jcfg")).fromJsonToObject(new TDLibConfig());
+
+    @Getter
+    private static final @NotNull UpdateResultHandler authorizationResultHandler = new UpdateAuthorizationResultHandler();
+    @Getter
+    private static final @NotNull UpdateResultHandler chatResultHandler = new UpdateChatResultHandler();
 
     private @NotNull Service loadChatsScheduler;
 
@@ -156,6 +164,15 @@ public final class TDLib implements IInitialize {
 
     public void stop() {
         this.client.send(new TdApi.Close(), log::debug);
+    }
+
+    public static @Nullable String readConsole() {
+        @Cleanup val scanner = new Scanner(System.in);
+
+        while (!scanner.hasNextLine())
+            return scanner.nextLine();
+
+        return null;
     }
 
     private <T extends TdApi.Object> T getAfterFinished(

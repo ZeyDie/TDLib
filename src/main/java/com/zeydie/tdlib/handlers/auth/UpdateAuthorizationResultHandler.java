@@ -14,8 +14,8 @@ import java.util.Arrays;
 import java.util.List;
 
 @Log4j2
-public final class UpdateAuthorizationStateResultHandler extends UpdateResultHandler {
-    private final @NotNull List<IStateHandler> states = Arrays.asList(
+public final class UpdateAuthorizationResultHandler extends UpdateResultHandler {
+    private static final @NotNull List<IStateHandler> states = Arrays.asList(
             new AuthorizationStateWaitTdlibParameters(
                     TDLib.getTdLibConfig().getApiId(),
                     TDLib.getTdLibConfig().getApiHash(),
@@ -26,6 +26,11 @@ public final class UpdateAuthorizationStateResultHandler extends UpdateResultHan
             new AuthorizationStateWaitPassword(),
             new AuthorizationStateReady()
     );
+
+    @Override
+    public void registerStateHandler(@NonNull final IStateHandler handler) {
+        states.add(handler);
+    }
 
     @Override
     public void onResult(@NonNull final TdApi.Object object) {
