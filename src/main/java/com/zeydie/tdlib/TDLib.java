@@ -1,7 +1,6 @@
 package com.zeydie.tdlib;
 
 import com.google.common.util.concurrent.Service;
-import com.zeydie.api.modules.interfaces.IInitialize;
 import com.zeydie.sgson.SGsonFile;
 import com.zeydie.tdlib.configs.AuthConfig;
 import com.zeydie.tdlib.configs.TDLibConfig;
@@ -26,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Log4j2
-public final class TDLib implements IInitialize {
+public final class TDLib {
     @Getter
     private static @NotNull TDLib instance = new TDLib();
 
@@ -72,8 +71,7 @@ public final class TDLib implements IInitialize {
 
     private @NotNull Service loadChatsScheduler;
 
-    @Override
-    public void preInit() {
+    private void preInit() {
         log.debug("================PREINIT==================");
         log.debug("AuthConfig: {}", this.authConfig);
         log.debug("TdLibConfig: {}", this.tdLibConfig);
@@ -103,7 +101,7 @@ public final class TDLib implements IInitialize {
         return System.getProperty("os.arch");
     }
 
-    private void extractAndLoadDll(@NonNull final Path path) {
+    public void extractAndLoadDll(@NonNull final Path path) {
         this.extractDll(path);
         this.loadDll(path);
     }
@@ -118,8 +116,6 @@ public final class TDLib implements IInitialize {
         @Cleanup val inputStream = TDLib.class.getClassLoader().getResourceAsStream(name);
 
         if (inputStream != null) {
-            path.getParent().toFile().mkdirs();
-
             Files.copy(
                     inputStream,
                     Paths.get(System.getProperties().getProperty("java.home"))
@@ -132,7 +128,7 @@ public final class TDLib implements IInitialize {
         } else log.warn("Not found {} ({})!", name, inputStream);
     }
 
-    private void loadDll(@NonNull final Path path) {
+    public void loadDll(@NonNull final Path path) {
         System.loadLibrary(
                 path.toFile().getName()
                         .replaceAll("\\.so", "")
@@ -140,9 +136,8 @@ public final class TDLib implements IInitialize {
         );
     }
 
-    @Override
     @SneakyThrows
-    public void init() {
+    private void init() {
         log.debug("================INIT==================");
 
         Client.setLogMessageHandler(this.verbosityLevelConsole, (verbosityLevel, message) -> log.debug(message));
@@ -155,10 +150,7 @@ public final class TDLib implements IInitialize {
         while (!this.isStarted()) ;
     }
 
-    @Override
-    public void postInit() {
-        log.debug("================POSTINIT==================");
-
+    public void startSchedulers() {
         this.loadChatsScheduler = new LoadChatsScheduler();
     }
 
@@ -175,7 +167,7 @@ public final class TDLib implements IInitialize {
         return null;
     }
 
-    private <T extends TdApi.Object> T getAfterFinished(
+    public  <T extends TdApi.Object> T getAfterFinished(
             @NonNull final AtomicReference<T> atomicReference,
             @NonNull final AtomicBoolean atomicBoolean
     ) {

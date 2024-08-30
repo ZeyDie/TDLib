@@ -12,6 +12,6 @@ public final class AuthorizationStateReady implements IStateHandler {
 
     @Override
     public void onResult(@NonNull final TdApi.Object object) {
-        TDLib.getInstance().postInit();
+        TDLib.getInstance().startSchedulers();
     }
 }
