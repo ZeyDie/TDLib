@@ -152,32 +152,6 @@ public final class TDLib implements IInitialize {
         log.debug("================POSTINIT==================");
 
         this.loadChatsScheduler = new LoadChatsScheduler();
-
-        /*client.send(
-                new TdApi.GetChat(7491346165L),
-                object -> {
-                    if (object instanceof TdApi.Chat chat) {
-                        var content = new TdApi.InputMessageText();
-                        var formattedText = new TdApi.FormattedText();
-                        formattedText.text = "+79236232768";
-                        content.text = formattedText;
-
-                        client.send(
-                                new TdApi.SendMessage(
-                                        7491346165L,
-                                        0,
-                                        null,
-                                        null,
-                                        null,
-                                        content
-                                ),
-                                log::debug
-                        );
-                    }
-                }
-        );*/
-
-
     }
 
     public void stop() {
