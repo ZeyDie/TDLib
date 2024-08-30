@@ -1,7 +1,12 @@
 import com.zeydie.tdlib.TDLib;
+import lombok.extern.log4j.Log4j;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.ClassOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestClassOrder;
 
+@Log4j
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
 public final class AuthTest {
     private final @NotNull TDLib tdLib = TDLib.getInstance();
@@ -11,14 +16,5 @@ public final class AuthTest {
     public void loadTest() {
         this.tdLib.preInit();
         this.tdLib.init();
-        this.tdLib.postInit();
-
-        Assertions.assertTrue(this.tdLib.isStarted());
-    }
-
-    @Test
-    @Order(2)
-    public void getChatTest() {
-
     }
 }

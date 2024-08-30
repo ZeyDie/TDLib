@@ -1,12 +1,12 @@
 package com.zeydie.tdlib;
 
-import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Service;
 import com.zeydie.api.modules.interfaces.IInitialize;
 import com.zeydie.sgson.SGsonFile;
 import com.zeydie.tdlib.configs.AuthConfig;
 import com.zeydie.tdlib.configs.TDLibConfig;
-import com.zeydie.tdlib.handlers.UpdateAuthorizationStateResultHandler;
+import com.zeydie.tdlib.handlers.basis.UpdateResultHandler;
+import com.zeydie.tdlib.schedulers.LoadChatsScheduler;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import org.drinkless.tdlib.Client;
@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -63,7 +62,7 @@ public final class TDLib implements IInitialize {
     @Getter
     private static @NotNull TDLibConfig tdLibConfig = new SGsonFile(TDLIB.resolve("tdlib.jcfg")).fromJsonToObject(new TDLibConfig());
 
-    private @NotNull Service scheduledService;
+    private @NotNull Service loadChatsScheduler;
 
     @Override
     public void preInit() {
@@ -128,8 +127,8 @@ public final class TDLib implements IInitialize {
     private void loadDll(@NonNull final Path path) {
         System.loadLibrary(
                 path.toFile().getName()
-                        .replaceAll(".so", "")
-                        .replaceAll(".dll", "")
+                        .replaceAll("\\.so", "")
+                        .replaceAll("\\.dll", "")
         );
     }
 
@@ -143,64 +142,46 @@ public final class TDLib implements IInitialize {
         Client.execute(new TdApi.SetLogVerbosityLevel(this.verbosityLevelFile));
         Client.execute(new TdApi.SetLogStream(new TdApi.LogStreamFile("logs/tdlib.log", Integer.MAX_VALUE, false)));
 
-        this.client = Client.create(new UpdateAuthorizationStateResultHandler(), exception -> log.error(exception.getMessage(), exception), exception -> log.error(exception.getMessage(), exception));
+        this.client = Client.create(new UpdateResultHandler(), exception -> log.error(exception.getMessage(), exception), exception -> log.error(exception.getMessage(), exception));
 
-        while (!this.isStarted());
+        while (!this.isStarted()) ;
     }
 
     @Override
     public void postInit() {
         log.debug("================POSTINIT==================");
 
-        this.scheduledService = new AbstractScheduledService() {
-            @Override
-            protected void runOneIteration() {
-                client.send(
-                        new TdApi.LoadChats(
-                                new TdApi.ChatListMain(),
-                                20
-                        ),
-                        log::debug
-                );
-                client.send(
-                        new TdApi.LoadChats(
-                                new TdApi.ChatListArchive(),
-                                20
-                        ),
-                        log::debug
-                );
-                client.send(
-                        new TdApi.LoadChats(
-                                new TdApi.ChatListFolder(),
-                                20
-                        ),
-                        log::debug
-                );
-            }
+        this.loadChatsScheduler = new LoadChatsScheduler();
 
-            @Override
-            protected @NotNull AbstractScheduledService.Scheduler scheduler() {
-                return Scheduler.newFixedRateSchedule(0, 1, TimeUnit.SECONDS);
-            }
-        }.startAsync();
+        /*client.send(
+                new TdApi.GetChat(7491346165L),
+                object -> {
+                    if (object instanceof TdApi.Chat chat) {
+                        var content = new TdApi.InputMessageText();
+                        var formattedText = new TdApi.FormattedText();
+                        formattedText.text = "+79236232768";
+                        content.text = formattedText;
+
+                        client.send(
+                                new TdApi.SendMessage(
+                                        7491346165L,
+                                        0,
+                                        null,
+                                        null,
+                                        null,
+                                        content
+                                ),
+                                log::debug
+                        );
+                    }
+                }
+        );*/
+
+
     }
 
     public void stop() {
-        this.client.send(new TdApi.Close(), object -> log.debug(object));
-    }
-
-    public void loadChats() {
-        this.client.send(
-                new TdApi.LoadChats(
-                        new TdApi.ChatListMain(),
-                        100
-                ),
-                log::debug
-        );
-        this.client.send(
-                new TdApi.GetChatHistory(),
-                log::debug
-        );
+        this.client.send(new TdApi.Close(), log::debug);
     }
 
     private <T extends TdApi.Object> T getAfterFinished(
@@ -224,46 +205,6 @@ public final class TDLib implements IInitialize {
 
                         atomicValue.set(chat);
                     } else log.error(object);
-
-                    atomicFinished.set(true);
-                }
-        );
-
-        return this.getAfterFinished(atomicValue, atomicFinished);
-    }
-
-    public @Nullable TdApi.ChatStatisticsChannel getChatStatistics(final long id) {
-        @NonNull val atomicValue = new AtomicReference<TdApi.ChatStatisticsChannel>();
-        @NonNull val atomicFinished = new AtomicBoolean(false);
-
-        this.client.send(
-                new TdApi.GetChatStatistics(id, false),
-                object -> {
-                    if (object instanceof @NonNull final TdApi.ChatStatisticsChannel chatStatisticsChannel) {
-                        log.debug("GetChatStatistics {}", id);
-
-                        atomicValue.set(chatStatisticsChannel);
-                    }
-
-                    atomicFinished.set(true);
-                }
-        );
-
-        return this.getAfterFinished(atomicValue, atomicFinished);
-    }
-
-    public @Nullable TdApi.ChatStatisticsSupergroup getChatStatisticsSupergroup(final long id) {
-        @NonNull val atomicValue = new AtomicReference<TdApi.ChatStatisticsSupergroup>();
-        @NonNull val atomicFinished = new AtomicBoolean(false);
-
-        this.client.send(
-                new TdApi.GetChatStatistics(id, false),
-                object -> {
-                    if (object instanceof @NonNull final TdApi.ChatStatisticsSupergroup chatStatisticsSupergroup) {
-                        log.debug("GetChatStatisticsSupergroup {}", id);
-
-                        atomicValue.set(chatStatisticsSupergroup);
-                    }
 
                     atomicFinished.set(true);
                 }

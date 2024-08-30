@@ -1,6 +1,7 @@
-package com.zeydie.tdlib.handlers.auth;
+package com.zeydie.tdlib.handlers.auth.states;
 
 import com.zeydie.tdlib.TDLib;
+import com.zeydie.tdlib.handlers.basis.IStateHandler;
 import lombok.Cleanup;
 import lombok.Getter;
 import lombok.NonNull;
@@ -11,33 +12,33 @@ import org.drinkless.tdlib.TdApi;
 import java.util.Scanner;
 
 @Log4j2
-public final class AuthorizationStateWaitPassword implements IResultHandler {
+public final class AuthorizationStateWaitCode implements IStateHandler {
     @Getter
-    private final int constructor = TdApi.AuthorizationStateWaitPassword.CONSTRUCTOR;
+    private final int constructor = TdApi.AuthorizationStateWaitCode.CONSTRUCTOR;
 
     @Override
     public void onResult(@NonNull final TdApi.Object object) {
-        this.sendCheckAuthenticationPassword(this.readPassword());
+        this.sendCheckAuthenticationCode(this.readCode());
     }
 
-    private @NonNull String readPassword() {
+    private @NonNull String readCode() {
         @Cleanup val scanner = new Scanner(System.in);
 
-        log.info("Write password: ");
+        log.info("Write code: ");
 
         return scanner.nextLine();
     }
 
-    private void sendCheckAuthenticationPassword(@NonNull final String password) {
+    private void sendCheckAuthenticationCode(@NonNull final String code) {
         TDLib.getClient().send(
-                new TdApi.CheckAuthenticationPassword(password),
+                new TdApi.CheckAuthenticationCode(code),
                 object -> {
                     if (object instanceof @NonNull final TdApi.Error error)
                         switch (error.code) {
                             case 400 -> {
-                                log.error("Invalid password");
+                                log.error("Invalid code");
 
-                                sendCheckAuthenticationPassword(readPassword());
+                                sendCheckAuthenticationCode(readCode());
                             }
                         }
                 }

@@ -1,6 +1,14 @@
 package org.drinkless.tdlib;
 
 public class TdApi {
+    static {
+        try {
+            System.loadLibrary("tdjni");
+        } catch (UnsatisfiedLinkError e) {
+            e.printStackTrace();
+        }
+    }
+
     private TdApi() {
     }
 

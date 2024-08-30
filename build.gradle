@@ -51,6 +51,7 @@ dependencies {
 
     // https://mvnrepository.com/artifact/org.projectlombok/lombok
     compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.+'
+    testImplementation group: 'org.projectlombok', name: 'lombok', version: '1.18.+'
     annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.+'
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
