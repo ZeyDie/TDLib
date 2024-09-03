@@ -15,12 +15,13 @@ import org.drinkless.tdlib.TdApi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
-import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -65,9 +66,9 @@ public final class TDLib {
     private static @NotNull TDLibConfig tdLibConfig = new SGsonFile(TDLIB.resolve("tdlib.jcfg")).fromJsonToObject(new TDLibConfig());
 
     @Getter
-    private static final @NotNull UpdateResultHandler authorizationResultHandler = new UpdateAuthorizationResultHandler();
+    private static final @NotNull UpdateAuthorizationResultHandler authorizationResultHandler = new UpdateAuthorizationResultHandler();
     @Getter
-    private static final @NotNull UpdateResultHandler chatResultHandler = new UpdateChatResultHandler();
+    private static final @NotNull UpdateChatResultHandler chatResultHandler = new UpdateChatResultHandler();
 
     private @NotNull Service loadChatsScheduler;
 
@@ -113,18 +114,22 @@ public final class TDLib {
         while (name.contains("\\"))
             name = name.replace("\\", "/");
 
+        if (this.getOs().toLowerCase(Locale.ROOT).startsWith("linux"))
+            name = Paths.get(name).getParent().resolve("lib" + path.getFileName()).toString();
+
         @Cleanup val inputStream = TDLib.class.getClassLoader().getResourceAsStream(name);
 
         if (inputStream != null) {
+            val libPath = Paths.get(System.getProperties().getProperty("java.home"))
+                    .resolve("bin")
+                    .resolve(Paths.get(name).getFileName());
             Files.copy(
                     inputStream,
-                    Paths.get(System.getProperties().getProperty("java.home"))
-                            .resolve("bin")
-                            .resolve(path.getFileName()),
+                    libPath,
                     StandardCopyOption.REPLACE_EXISTING
             );
 
-            log.debug("Extracted {}", name);
+            log.debug("Extracted {}", libPath);
         } else log.warn("Not found {} ({})!", name, inputStream);
     }
 
@@ -158,16 +163,21 @@ public final class TDLib {
         this.client.send(new TdApi.Close(), log::debug);
     }
 
+    @SneakyThrows
     public static @Nullable String readConsole() {
-        @Cleanup val scanner = new Scanner(System.in);
-
-        while (!scanner.hasNextLine())
-            return scanner.nextLine();
+        try (
+                val inputStream = new InputStreamReader(System.in);
+                val bufferedReader = new BufferedReader(inputStream)
+        ) {
+            return bufferedReader.readLine();
+        } catch (final Exception exception) {
+            exception.printStackTrace();
+        }
 
         return null;
     }
 
-    public  <T extends TdApi.Object> T getAfterFinished(
+    public <T extends TdApi.Object> T getAfterFinished(
             @NonNull final AtomicReference<T> atomicReference,
             @NonNull final AtomicBoolean atomicBoolean
     ) {
