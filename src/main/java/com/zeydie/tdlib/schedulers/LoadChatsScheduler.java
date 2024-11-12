@@ -2,6 +2,7 @@ package com.zeydie.tdlib.schedulers;
 
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.zeydie.tdlib.TDLib;
+import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 import org.drinkless.tdlib.TdApi;
 import org.jetbrains.annotations.NotNull;
@@ -19,24 +20,29 @@ public final class LoadChatsScheduler extends AbstractScheduledService {
         TDLib.getClient().send(
                 new TdApi.LoadChats(
                         new TdApi.ChatListMain(),
-                        100
+                        Integer.MAX_VALUE
                 ),
-                log::debug
+                this::callbackResult
         );
         TDLib.getClient().send(
                 new TdApi.LoadChats(
                         new TdApi.ChatListArchive(),
-                        100
+                        Integer.MAX_VALUE
                 ),
-                log::debug
+                this::callbackResult
         );
         TDLib.getClient().send(
                 new TdApi.LoadChats(
                         new TdApi.ChatListFolder(),
-                        100
+                        Integer.MAX_VALUE
                 ),
-                log::debug
+                this::callbackResult
         );
+    }
+
+    private void callbackResult(@NonNull final TdApi.Object result) {
+        if (!(result instanceof TdApi.Error))
+            log.debug(result);
     }
 
     @Override

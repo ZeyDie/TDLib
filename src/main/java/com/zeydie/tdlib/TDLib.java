@@ -61,9 +61,9 @@ public final class TDLib {
     public static @NotNull Path LINUX_TDJNI = LINUX_TDLIB.resolve("tdjni.so");
 
     @Getter
-    private static @NotNull AuthConfig authConfig = new SGsonFile(TDLIB.resolve("auth.jcfg")).fromJsonToObject(new AuthConfig());
+    private static @NotNull AuthConfig authConfig = SGsonFile.createPretty(TDLIB.resolve("auth.jcfg")).fromJsonToObject(new AuthConfig());
     @Getter
-    private static @NotNull TDLibConfig tdLibConfig = new SGsonFile(TDLIB.resolve("tdlib.jcfg")).fromJsonToObject(new TDLibConfig());
+    private static @NotNull TDLibConfig tdLibConfig = SGsonFile.createPretty(TDLIB.resolve("tdlib.jcfg")).fromJsonToObject(new TDLibConfig());
 
     @Getter
     private static final @NotNull UpdateAuthorizationResultHandler authorizationResultHandler = new UpdateAuthorizationResultHandler();
@@ -130,7 +130,7 @@ public final class TDLib {
             );
 
             log.debug("Extracted {}", libPath);
-        } else log.warn("Not found {} ({})!", name, inputStream);
+        } else log.warn("No found {} ({})!", name, inputStream);
     }
 
     public void loadDll(@NonNull final Path path) {
@@ -165,16 +165,15 @@ public final class TDLib {
 
     @SneakyThrows
     public static @Nullable String readConsole() {
-        try (
-                val inputStream = new InputStreamReader(System.in);
-                val bufferedReader = new BufferedReader(inputStream)
-        ) {
-            return bufferedReader.readLine();
-        } catch (final Exception exception) {
-            exception.printStackTrace();
-        }
+        val inputStream = new InputStreamReader(System.in);
+        val bufferedReader = new BufferedReader(inputStream);
 
-        return null;
+        val line = bufferedReader.readLine();
+
+        inputStream.close();
+        bufferedReader.close();
+
+        return line;
     }
 
     public <T extends TdApi.Object> T getAfterFinished(
